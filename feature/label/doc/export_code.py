@@ -1,8 +1,8 @@
 import os
 from docx import Document
 
-VERSION = "0.1.0.0"
-SERVICE_NAME = "Coin"
+VERSION = "1.2.0"
+SERVICE_NAME = "Label"
 OUTPUT_NAME = f"{VERSION}_{SERVICE_NAME}.docx"
 
 def export_code():
