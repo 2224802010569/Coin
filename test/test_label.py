@@ -9,12 +9,14 @@ from feature.label.service.sign import SignService
 from feature.label.service.break_service import BreakService
 from feature.label.service.strength import StrengthService
 from feature.label.service.trend import TrendService
+from feature.label.usecase.label import Label
+from feature.label.output.label import LabelOutput
 from test_csv import csv_pd
 from test_draw import TestDraw
 
 
 if __name__ == "__main__":
-    df = DataInput().read()
+    # df = DataInput().read()
     # df = SignService().ma_sign(df)
     # csv_pd(name="label_ma_sign", df=df)
     # df = SignService().structure_sign(df)
@@ -25,13 +27,18 @@ if __name__ == "__main__":
     # df = TrendService().run(df = df)
     # csv_pd(name="label_trend", df=df)
 
-    tre_df = TrendService().run(df = df)
-    vi = TestDraw(df)
-    fig1 = vi.draw_with_trend(tre_df)
-    fig1.write_html("test_ans/trend.html")
+    # tre_df = TrendService().run(df = df)
+    # vi = TestDraw(df)
+    # fig1 = vi.draw_with_trend(tre_df)
+    # fig1.write_html("test_ans/trend.html")
 
     # str_df = StrengthService().run(df= df)
     # vi = TestDraw(df)
     # fig2 = vi.draw_with_strength(str_df)
     # fig2.write_html("test_ans/strength.html")
     
+    # df = LabelOutput().read_trend()
+    # csv_pd(name="label_trend", df=df)
+
+    df = LabelOutput().read_strength()
+    csv_pd(name="label_strength", df=df)

@@ -9,5 +9,4 @@ class DataUpdateOutput:
         df = Read().run(entity)
         if df is None:
             Create().run()
-        
         Update().run(entity = entity, db = db)

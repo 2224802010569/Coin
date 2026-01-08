@@ -44,7 +44,11 @@ class SQLService:
 
     def read_table(self) -> pd.DataFrame:
         with self._connect() as conn:
-            return pd.read_sql(f"SELECT * FROM {self.name}", conn)
+            try:
+                return pd.read_sql(f"SELECT * FROM {self.name}", conn)
+            except:
+                return None
+
 
     def update_table(self, data: pd.DataFrame = None):
         if data is None or data.empty:

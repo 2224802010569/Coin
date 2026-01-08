@@ -1,137 +1,104 @@
 import pandas as pd
 import numpy as np
-from config import PROFILE
 from feature.label.entities.trend import Trend
+from config import PROFILE
 
 
 class TrendService:
 
     def __init__(self):
-        self.stability = PROFILE.Stability      # càng cao → càng ít nhiễu
-        self.volatility = PROFILE.Volatility    # scale nhiễu
+        self.stability = PROFILE.Stability
+        self.volatility = PROFILE.Volatility
         self.min_len = PROFILE.Min_Trend_length
+        self.min_floor = 3
+        self.vol_window = max(10, self.min_len)
 
-    # --------------------------------------------------
-    # TRUE RANGE (tối giản)
-    # --------------------------------------------------
-    def _true_range(self, h, l, pc):
-        return max(h - l, abs(h - pc), abs(l - pc))
-
-    # --------------------------------------------------
-    # HƯỚNG GIÁ (close-to-close, có eps)
-    # --------------------------------------------------
-    def _price_dir(self, prev_close, close, eps):
-        if close > prev_close + eps:
-            return 1
-        if close < prev_close - eps:
-            return -1
-        return 0
-
-    # --------------------------------------------------
-    # RUN
-    # --------------------------------------------------
-    def run(self, df: pd.DataFrame, timeframe: str = None) -> pd.DataFrame:
-        df = df.reset_index(drop=True)
-
-        segments = []
-
-        state = "sideways"
-        state_start = 0
-
-        # ---------- pha accumulate ----------
-        cand_dir = 0
-        cand_len = 0
-
-        # ---------- pha trend ----------
-        trend_dir = 0
-        trend_len = 0
-        noise_count = 0
-        tr_list = []
-
-        prev_close = df.loc[0, "close"]
-
+    def _detect_raw_trends(self, df: pd.DataFrame):
+        trends = []
+        start, direction = 0, None
         for i in range(1, len(df)):
-            row = df.loc[i]
-            close = row["close"]
+            diff = df.loc[i, "close"] - df.loc[i - 1, "close"]
+            cur = "up" if diff > 0 else "down" if diff < 0 else None
+            if direction is None:
+                direction, start = cur, i - 1
+                continue
+            if cur != direction:
+                if i - start >= 2:
+                    trends.append((start, i - 1, direction))
+                start, direction = i - 1, cur
+        if direction and len(df) - start >= 2:
+            trends.append((start, len(df) - 1, direction))
+        return trends
 
-            # ----- ATR cục bộ -----
-            tr = self._true_range(row["high"], row["low"], prev_close)
-            tr_list.append(tr)
-            atr = np.mean(tr_list)
-            eps = self.volatility * atr if atr > 0 else 0.0
+    def _merge_trends(self, raws, df: pd.DataFrame):
+        merged, i = [], 0
+        while i < len(raws):
+            s, e, d = raws[i]
+            anchor = df.loc[s:e, "close"].median()
+            violations = 0
+            min_len = self.min_len
+            max_gap = int(self.stability * self.min_len)
+            j = i + 1
+            while j < len(raws):
+                ns, ne, _ = raws[j]
+                if ns - e - 1 > max_gap:
+                    break
+                seg_median = df.loc[ns:ne, "close"].median()
+                if (d == "up" and seg_median <= anchor) or \
+                (d == "down" and seg_median >= anchor):
+                    break
+                left = max(0, ns - self.vol_window)
+                std = df.loc[left:ns, "close"].std()
+                if std > 0 and abs(seg_median - anchor) > self.volatility * std:
+                    violations += 1
+                trend_len = ne - s + 1
+                if violations > int((1 - self.stability) * trend_len):
+                    min_len = max(self.min_floor, min_len - 1)
+                e, anchor = ne, seg_median
+                j += 1
+            if e - s + 1 >= min_len:
+                merged.append((s, e, d))
+            i = j
+        return merged
 
-            d = self._price_dir(prev_close, close, eps)
+    def _detect_sideways(self, df: pd.DataFrame, trends):
+        occupied = {i for s, e, _ in trends for i in range(s, e + 1)}
+        sideways, i = [], 0
+        while i < len(df):
+            if i in occupied:
+                i += 1
+                continue
+            start, closes = i, []
+            while i < len(df) and i not in occupied:
+                closes.append(df.loc[i, "close"])
+                i += 1
+            if len(closes) >= self.min_floor:
+                mid = np.median(closes)
+                if mid > 0 and (max(closes) - min(closes)) / mid <= self.volatility:
+                    sideways.append((start, i - 1))
+        return sideways
 
-            # ==================================================
-            # PHASE 1: ACCUMULATE (SIDEWAYS)
-            # ==================================================
-            if state == "sideways":
-                if d == 0:
-                    cand_len = 0
-                    cand_dir = 0
-                else:
-                    if cand_dir == 0 or d == cand_dir:
-                        cand_dir = d
-                        cand_len += 1
-                    else:
-                        cand_dir = d
-                        cand_len = 1
-
-                # ---- xác nhận trend ----
-                if cand_len >= self.min_len:
-                    state = "uptrend" if cand_dir == 1 else "downtrend"
-                    state_start = i - cand_len + 1
-
-                    # khóa trend
-                    trend_dir = cand_dir
-                    trend_len = cand_len
-                    noise_count = 0
-                    tr_list = []
-
-            # ==================================================
-            # PHASE 2: TREND (DUY TRÌ)
-            # ==================================================
-            else:
-                trend_len += 1
-
-                if d == 0:
-                    noise_count += 1
-                elif d != trend_dir:
-                    noise_count += 2   # nến ngược hướng → phạt nặng
-
-                max_noise = int(trend_len * (1 - self.stability))
-
-                # ---- FAIL ----
-                if noise_count > max_noise:
-                    segments.append(
-                        Trend(
-                            start=df.loc[state_start, "timestamp"],
-                            end=df.loc[i - 1, "timestamp"],
-                            timeframe=timeframe,
-                            label=state
-                        )
-                    )
-
-                    # reset toàn bộ
-                    state = "sideways"
-                    state_start = i
-                    cand_dir = 0
-                    cand_len = 0
-                    trend_dir = 0
-                    trend_len = 0
-                    noise_count = 0
-                    tr_list = []
-
-            prev_close = close
-
-        # đóng đoạn cuối
-        segments.append(
+    def run(self, df: pd.DataFrame):
+        df = df.reset_index(drop=True)
+        timeframe = df["timeframe"].iloc[0]
+        trends = self._merge_trends(self._detect_raw_trends(df), df)
+        sideways = self._detect_sideways(df, trends)
+        result = [
             Trend(
-                start=df.loc[state_start, "timestamp"],
-                end=df.loc[len(df) - 1, "timestamp"],
+                start=df.loc[s, "timestamp"],
+                end=df.loc[e, "timestamp"],
                 timeframe=timeframe,
-                label=state
+                label="uptrend" if d == "up" else "downtrend"
             )
-        )
-
-        return pd.DataFrame([t.__dict__ for t in segments])
+            for s, e, d in trends
+        ] + [
+            Trend(
+                start=df.loc[s, "timestamp"],
+                end=df.loc[e, "timestamp"],
+                timeframe=timeframe,
+                label="sideways"
+            )
+            for s, e in sideways
+        ]
+        result.sort(key=lambda x: x.start)
+        return pd.DataFrame([r.__dict__ for r in result])

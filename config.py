@@ -25,11 +25,11 @@ class COIN:
 
 class PROFILE:
     Stability        = 0.55 #Ổn định
-    Volatility       = 0.50 #Biến động
+    Volatility       = 0.5 #Biến động
     Aggression       = 0.50 #Hung hãng
     Confidence       = 0.55 #Lạc quan và bi quan
     Horizon          = 60
-    Min_Trend_length = 14
+    Min_Trend_length = 5
 
 class LABEL:
     TREND= ["uptrend" , "downtrend" , "sideways"]

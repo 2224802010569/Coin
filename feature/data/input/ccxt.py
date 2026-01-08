@@ -10,7 +10,6 @@ from datetime import datetime
 from config import COIN
 from feature.data.entities.candle import Candle
 import pandas as pd
-from feature.data.service.spark import SparkService
 
 class CCXTInput:
     def run(

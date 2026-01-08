@@ -1,10 +1,19 @@
 from feature.label.entities.strength import Strength
 from feature.label.entities.trend import Trend
 from feature.label.input.data_input import DataInput
+from feature.label.usecase.label import Label
 
 class LabelOutput:
-    def get_trend(self):
-        return DataInput.read(Trend)
+    def read_trend(self):
+        try:
+            return DataInput.read(entity = Trend)
+        except:
+            Label().run()
+            return DataInput.read(entity = Trend)
     
-    def get_strength(self):
-        return DataInput.read(Strength)
+    def read_strength(self):
+        try:
+            return DataInput.read(entity = Strength)
+        except:
+            Label().run()
+            return DataInput.read(entity = Strength)
