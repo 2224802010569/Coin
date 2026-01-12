@@ -1,12 +1,12 @@
+from feature.data.entities.candle import Candle
 from feature.data.output.read import DataReadOutput
 from feature.data.output.update import DataUpdateOutput
-from feature.label.entities.trend import Trend
 
 
 class DataInput:
     @staticmethod
-    def read(entity = Trend):
+    def read(entity = Candle):
         return DataReadOutput().run(entity)
     
-    def update(entity = Trend, db = None):
+    def update(entity = Candle, db = None):
         return DataUpdateOutput().run(entity , db)

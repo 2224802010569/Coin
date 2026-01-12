@@ -4,6 +4,8 @@ import os
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, ROOT)
 
+from feature.label.entities.strength import Strength
+from feature.label.entities.trend import Trend
 from feature.label.input.data_input import DataInput
 from feature.label.service.sign import SignService
 from feature.label.service.break_service import BreakService
@@ -16,7 +18,7 @@ from test_draw import TestDraw
 
 
 if __name__ == "__main__":
-    # df = DataInput().read()
+    df = DataInput().read(entity = Strength)
     # df = SignService().ma_sign(df)
     # csv_pd(name="label_ma_sign", df=df)
     # df = SignService().structure_sign(df)
@@ -40,5 +42,5 @@ if __name__ == "__main__":
     # df = LabelOutput().read_trend()
     # csv_pd(name="label_trend", df=df)
 
-    df = LabelOutput().read_strength()
+    # df = LabelOutput().read_strength()
     csv_pd(name="label_strength", df=df)
