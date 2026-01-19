@@ -42,10 +42,10 @@ class SQLService:
         with self._connect() as conn:
             conn.executescript(sql)
 
-    def read_table(self) -> pd.DataFrame:
+    def read_table(self, tf: str = "1d") -> pd.DataFrame:
         with self._connect() as conn:
             try:
-                return pd.read_sql(f"SELECT * FROM {self.name}", conn)
+                return pd.read_sql(f"SELECT * FROM {self.name} WHERE timeframe = '{tf}'", conn)
             except:
                 return None
 

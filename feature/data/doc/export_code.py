@@ -1,7 +1,7 @@
 import os
 from docx import Document
 
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 SERVICE_NAME = "Data"
 OUTPUT_NAME = f"{VERSION}_{SERVICE_NAME}.docx"
 

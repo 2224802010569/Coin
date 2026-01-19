@@ -1,7 +1,7 @@
 import os
 from docx import Document
 
-VERSION = "0.0.0"
+VERSION = "1.0.1"
 SERVICE_NAME = "Deep_Learing"
 OUTPUT_NAME = f"{VERSION}_{SERVICE_NAME}.docx"
 

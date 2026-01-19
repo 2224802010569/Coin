@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -5,6 +6,7 @@ class DATA:
     BASE_DIR = Path(__file__).resolve().parents[0]
     STORAGE_DIR = BASE_DIR/ "data" / "storage"
     INPUT_DIR = BASE_DIR / "data" / "storage" / "input"
+    MODEL_DIR = BASE_DIR / "data" / "storage" / "model"
     PGSQL = {
         "engine": "postgres",
         "host": "localhost",
@@ -21,25 +23,89 @@ class COIN:
     SYMBOL = "BTC/USDT"
     EXCHANGE = "binance"
     START_DATE= datetime(2018, 1, 1)
-    END_DATE= datetime(2024, 1, 1)
+    END_DATE= datetime(2025, 1, 1)
+    BALANCE = 100
+    FEE = 0.001
 
+@dataclass(frozen=True)
 class PROFILE:
-    Stability        = 0.55 #Ổn định
-    Volatility       = 0.5 #Biến động
-    Aggression       = 0.50 #Hung hãng
-    Confidence       = 0.55 #Lạc quan và bi quan
-    Horizon          = 60
-    Min_Trend_length = 5
+    Stability: float #Ổn định
+    Volatility: float #Biến động
+    Aggression: float #Hung hãng
+    Confidence: float #Lạc quan và bi quan
+    Horizon: int
+    Min_Trend_length: int
+    eval: str
+
+SAFE = PROFILE(
+    Stability=0.75,
+    Volatility=0.30,
+    Aggression=0.25,
+    Confidence=0.60,
+    Horizon=90,
+    Min_Trend_length=10,
+    eval = "stability"
+)
+
+BALANCED = PROFILE(
+    Stability=0.55,
+    Volatility=0.50,
+    Aggression=0.50,
+    Confidence=0.55,
+    Horizon=60,
+    Min_Trend_length=5,
+    eval = "balanced"
+)
+
+AGGRESSIVE = PROFILE(
+    Stability=0.30,
+    Volatility=0.75,
+    Aggression=0.75,
+    Confidence=0.65,
+    Horizon=30,
+    Min_Trend_length=3,
+    eval = "profit"
+)
+
+class PROCESSING:
+    MA = [7,21]
+    EMA = [7,21]
+    RSI = 14
+    VOLATILITY = 14
+    TRAIN = 365
+    TEST = 90
+    STEP = 90
 
 class LABEL:
     TREND= ["uptrend" , "downtrend" , "sideways"]
     STRENGTH= ["strong" , "weak" , "strong high" , "weak high" , "strong low" , "weak low"]
     RECOMMEND = ["buy", "sell"]
 
-class SIGN:
-    pass
+class MODEL:
+    EPOCHS =20
+    BATCH_SIZE = 256
+    LR = 1e-3
+    TRAIN_RATIO = 0.7
+    HIDDEN = [64,32]
+    WINDOW = 16
+
+def get_profile(name:str = "balanced") -> PROFILE:
+    name = name.lower()
+    return {
+        "safe": SAFE,
+        "balanced": BALANCED,
+        "aggressive": AGGRESSIVE
+    }[name]
+
+def set_profile(name: str):
+    global ACTIVE_PROFILE, PROFILE
+    ACTIVE_PROFILE = name
+    PROFILE = get_profile(name)
 
 DATA = DATA()
 COIN = COIN()
-PROFILE = PROFILE()
+ACTIVE_PROFILE = "balanced"
+PROFILE = get_profile(ACTIVE_PROFILE)
+PROCESSING = PROCESSING()
 LABEL = LABEL()
+MODEL = MODEL()

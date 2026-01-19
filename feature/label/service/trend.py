@@ -5,7 +5,6 @@ from config import PROFILE
 
 
 class TrendService:
-
     def __init__(self):
         self.stability = PROFILE.Stability
         self.volatility = PROFILE.Volatility
@@ -15,20 +14,28 @@ class TrendService:
 
     def _detect_raw_trends(self, df: pd.DataFrame):
         trends = []
-        start, direction = 0, None
+        start, direction = None, None
+
         for i in range(1, len(df)):
             diff = df.loc[i, "close"] - df.loc[i - 1, "close"]
             cur = "up" if diff > 0 else "down" if diff < 0 else None
-            if direction is None:
-                direction, start = cur, i - 1
+            if cur is None:
                 continue
+
+            if direction is None:
+                start, direction = i - 1, cur
+                continue
+
             if cur != direction:
                 if i - start >= 2:
                     trends.append((start, i - 1, direction))
                 start, direction = i - 1, cur
-        if direction and len(df) - start >= 2:
+
+        if direction and start is not None and len(df) - start >= 2:
             trends.append((start, len(df) - 1, direction))
+
         return trends
+
 
     def _merge_trends(self, raws, df: pd.DataFrame):
         merged, i = [], 0
@@ -45,8 +52,9 @@ class TrendService:
                     break
                 seg_median = df.loc[ns:ne, "close"].median()
                 if (d == "up" and seg_median <= anchor) or \
-                (d == "down" and seg_median >= anchor):
+                    (d == "down" and seg_median >= anchor):
                     break
+
                 left = max(0, ns - self.vol_window)
                 std = df.loc[left:ns, "close"].std()
                 if std > 0 and abs(seg_median - anchor) > self.volatility * std:
@@ -63,7 +71,8 @@ class TrendService:
 
     def _detect_sideways(self, df: pd.DataFrame, trends):
         occupied = {i for s, e, _ in trends for i in range(s, e + 1)}
-        sideways, i = [], 0
+        sideways = []
+        i = 0
         while i < len(df):
             if i in occupied:
                 i += 1
@@ -78,27 +87,25 @@ class TrendService:
                     sideways.append((start, i - 1))
         return sideways
 
-    def run(self, df: pd.DataFrame):
+    def run(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.reset_index(drop=True)
         timeframe = df["timeframe"].iloc[0]
         trends = self._merge_trends(self._detect_raw_trends(df), df)
         sideways = self._detect_sideways(df, trends)
+        labels = ["sideways"] * len(df)
+        for s, e, d in trends:
+            label = "uptrend" if d == "up" else "downtrend"
+            for i in range(s, e + 1):
+                labels[i] = label
+        for s, e in sideways:
+            for i in range(s, e + 1):
+                labels[i] = "sideways"
         result = [
             Trend(
-                start=df.loc[s, "timestamp"],
-                end=df.loc[e, "timestamp"],
+                timestamp=df.loc[i, "timestamp"],
                 timeframe=timeframe,
-                label="uptrend" if d == "up" else "downtrend"
+                label=labels[i]
             )
-            for s, e, d in trends
-        ] + [
-            Trend(
-                start=df.loc[s, "timestamp"],
-                end=df.loc[e, "timestamp"],
-                timeframe=timeframe,
-                label="sideways"
-            )
-            for s, e in sideways
+            for i in range(len(df))
         ]
-        result.sort(key=lambda x: x.start)
         return pd.DataFrame([r.__dict__ for r in result])

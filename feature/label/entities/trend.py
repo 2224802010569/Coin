@@ -3,7 +3,6 @@ from datetime import datetime
 
 @dataclass
 class Trend:
-    start: datetime
-    end: datetime
+    timestamp: datetime
     timeframe: str
     label: str #uptrend / downtrend / sideways

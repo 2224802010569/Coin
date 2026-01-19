@@ -2,10 +2,12 @@ import os
 import plotly.graph_objects as go
 import pandas as pd
 
+from feature.data.output.read import DataReadOutput
+
 class TestDraw:
     
-    def __init__(self, df: pd.DataFrame):
-        self.df = df.copy()
+    def __init__(self):
+        self.df = DataReadOutput().run()
 
     def _base_candlestick(self) -> go.Figure:
         fig = go.Figure()
@@ -38,19 +40,38 @@ class TestDraw:
             "sideways": "rgba(150, 150, 150, 0.10)"
         }
 
-        for _, row in trend_df.iterrows():
-            fig.add_vrect(
-                x0=row["start"],
-                x1=row["end"],
-                fillcolor=color_map.get(row["label"], "rgba(0,0,0,0)"),
-                opacity=1,
-                layer="below",
-                line_width=0
-            )
+        df = trend_df.sort_values("timestamp").reset_index(drop=True)
+
+        start_idx = 0
+        current_label = df.loc[0, "label"]
+
+        for i in range(1, len(df)):
+            if df.loc[i, "label"] != current_label:
+                fig.add_vrect(
+                    x0=df.loc[start_idx, "timestamp"],
+                    x1=df.loc[i - 1, "timestamp"],
+                    fillcolor=color_map.get(current_label, "rgba(0,0,0,0)"),
+                    opacity=1,
+                    layer="below",
+                    line_width=0
+                )
+                start_idx = i
+                current_label = df.loc[i, "label"]
+
+        # đoạn cuối
+        fig.add_vrect(
+            x0=df.loc[start_idx, "timestamp"],
+            x1=df.loc[len(df) - 1, "timestamp"],
+            fillcolor=color_map.get(current_label, "rgba(0,0,0,0)"),
+            opacity=1,
+            layer="below",
+            line_width=0
+        )
 
         fig.update_layout(
             title="Price with Trend State (Background)"
         )
+
         return fig
 
     def draw_with_strength(self, strength_df: pd.DataFrame) -> go.Figure:
@@ -94,5 +115,39 @@ class TestDraw:
             )
         fig.update_layout(
             title="Price with Strength Markers"
+        )
+        return fig
+
+    def draw_with_sign(self, df: pd.DataFrame) -> go.Figure:
+        fig = self._base_candlestick()
+        sign_df = df[df["sign"].isin(["buy", "sell"])]
+        color_map = {
+            "buy": "green",
+            "sell": "red",
+        }
+        symbol_map = {
+            "buy": "triangle-up",
+            "sell": "triangle-down",
+        }
+        y_map = {
+            "buy": "low",
+            "sell": "high",
+        }
+        for sign, gdf in sign_df.groupby("sign"):
+            fig.add_trace(
+                go.Scatter(
+                    x=gdf["timestamp"],
+                    y=gdf[y_map[sign]],
+                    mode="markers",
+                    marker=dict(
+                        size=10,
+                        color=color_map[sign],
+                        symbol=symbol_map[sign]
+                    ),
+                    name=f"sign:{sign}"
+                )
+            )
+        fig.update_layout(
+            title="Price with Buy / Sell Signals"
         )
         return fig

@@ -1,70 +1,69 @@
-import sys
-from pathlib import Path
-
 import numpy as np
-ROOT = Path(__file__).resolve().parents[3]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 import pandas as pd
 from config import PROFILE
 
 class SignService:
     def __init__(self):
-        self.horizon = PROFILE.Horizon
+        pass
 
-    def ma_sign(self, df: pd.DataFrame = None) -> pd.DataFrame:
-        ma = df["close"].rolling(self.horizon, min_periods=1).mean()
-        ma_slope = ma.diff()
-        df["ma"] = ma
-        df["ma_slope"] = ma_slope
-        df["ma_direction"] = np.where(
-            df["close"] > ma, "up",
-            np.where(df["close"] < ma, "down", "neutral")
+    def map_with_candle(self,candle: pd.DataFrame = None,df: pd.DataFrame = None) -> pd.DataFrame:
+        candle = candle.copy()
+        df = df.copy()
+        # candle["timestamp"] = pd.to_datetime(candle["timestamp"], utc=True)
+        # df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        result = candle.merge(
+            df[["timestamp", "label"]],
+            on="timestamp",
+            how="left"
         )
-        df["ma_slope_sign"] = np.where(ma_slope > 0, "up",np.where(ma_slope < 0, "down", "flat"))
-        group_id = df["ma_direction"].ne(df["ma_direction"].shift()).cumsum()
-        df["ma_persistence"] = df.groupby(group_id).cumcount() + 1
-        return df[["ma_direction","ma_slope_sign","ma_persistence"]]
+        return result
 
 
-    def structure_sign(self, df: pd.DataFrame = None) -> pd.DataFrame:
-        prev_high = df["high"].shift(1)
-        prev_low = df["low"].shift(1)
-        df["prev_high"] = prev_high
-        df["prev_low"] = prev_low
-        bullish = (df["high"] > prev_high) & (df["low"] > prev_low)
-        bearish = (df["high"] < prev_high) & (df["low"] < prev_low)
-        df["structure_state"] = np.select(
-            [bullish, bearish],
-            ["bullish", "bearish"],
-            default="range"
+    def sign_for_trend(self, df: pd.DataFrame = None, k: int = 3, use_sideway: bool = True) -> pd.DataFrame:
+        df["sign"] = "hold"
+        highs = df["high"].values
+        lows = df["low"].values
+        for i in range(k, len(df) - k):
+            trend = df.at[i, "label"]
+            window_high = highs[i - k : i + k + 1]
+            window_low = lows[i - k : i + k + 1]
+            is_local_high = highs[i] == window_high.max()
+            is_local_low = lows[i] == window_low.min()
+            if trend == "uptrend" and is_local_high:
+                df.at[i, "sign"] = "sell"
+            elif trend == "downtrend" and is_local_low:
+                df.at[i, "sign"] = "buy"
+            elif trend == "sideways" and use_sideway:
+                if is_local_low:
+                    df.at[i, "sign"] = "buy"
+                elif is_local_high:
+                    df.at[i, "sign"] = "sell"
+        return df
+
+    def map_all(self,
+        trend: pd.DataFrame = None,
+        participation: pd.DataFrame = None
+    ) -> pd.DataFrame:
+        t = trend.copy()
+        part = participation.copy()
+
+        # ---- normalize column names ----
+        for df in (t, part):
+            df.columns = df.columns.str.strip().str.lower()
+
+        # ---- ensure timestamp is column ----
+        for df in (t, part):
+            if "timestamp" not in df.columns and df.index.name == "timestamp":
+                df.reset_index(inplace=True)
+
+        result = t.merge(
+            part[["timestamp", "timeframe", "score", "label"]]
+                .rename(columns={
+                    "score": "participation_score",
+                    "label": "participation_label"
+                }),
+            on=["timestamp", "timeframe"],
+            how="left"
         )
-        df["failed_break"] = (
-            ((df["high"] > prev_high) & (df["close"] < prev_high)) |
-            ((df["low"] < prev_low) & (df["close"] > prev_low))
-        )
-        return df[["structure_state","failed_break"]]
 
-
-    def vwap_sign(self, df: pd.DataFrame = None) -> pd.DataFrame:
-        typical_price = (df["high"] + df["low"] + df["close"]) / 3
-        vwap = (typical_price * df["volume"]).cumsum() / df["volume"].cumsum()
-        df["vwap"] = vwap
-        df["vwap_distance"] = (df["close"] - vwap) / vwap
-        df["vwap_location"] = np.where(
-            df["vwap_distance"] > 0, "above",
-            np.where(df["vwap_distance"] < 0, "below", "near")
-        )
-        df["vwap_stretch"] = pd.cut(
-            df["vwap_distance"].abs(),
-            bins=[0, 0.002, 0.005, 1],
-            labels=["normal", "extended", "extreme"]
-        )
-        return df[["vwap_location","vwap_stretch"]]
-
-    def run(self, df: pd.DataFrame) -> pd.DataFrame:
-        ma = self.ma_sign(df)
-        structure = self.structure_sign(df)
-        vwap = self.vwap_sign(df)
-        sign_df = pd.concat([ma, structure, vwap], axis=1)
-        return sign_df
+        return result

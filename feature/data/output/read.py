@@ -1,12 +1,17 @@
 import pandas as pd
+from feature.data.entities.candle import Candle
+from feature.data.usecase.profile import ProfileUC
 from feature.data.usecase.read import Read
 from feature.data.usecase.create import Create
+from feature.data.usecase.update import Update
 
 
 class DataReadOutput:
-    def run(self, entity = None) -> pd.DataFrame:
-        df = Read().run(entity)
-        if df is None:
-            Create().run()
-            df = Read().run(entity)
+    def run(self, tf = "1d") -> pd.DataFrame:
+        df = Read().run(Candle, tf = tf)
+        if df is None or df.empty:
+            Create().run(Candle)
+            Update().run(Candle)
+            ProfileUC().run()
+            df = Read().run(Candle, tf = tf)
         return df

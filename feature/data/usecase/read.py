@@ -5,7 +5,7 @@ class Read:
     def __init__(self):
         pass
 
-    def run(self, entity = None) -> pd.DataFrame:
+    def run(self, entity = None, tf = "1d") -> pd.DataFrame:
         if entity is None:
             from feature.data.entities.candle import Candle
             entity = Candle
@@ -13,7 +13,7 @@ class Read:
         match DATA.OUTPUT:
             case "sql":
                 from feature.data.service.sql import SQLService
-                return SQLService(entity).read_table()
+                return SQLService(entity).read_table(tf=tf)
             # case "pgsql":
             #     from feature.data.service.pgsql import PGSQLService
             #     c = PGSQLService(entity)
