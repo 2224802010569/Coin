@@ -11,7 +11,7 @@ sys.path.insert(0, ROOT)
 from config import DATA
 from feature.data.input.ccxt import CCXTInput
 from feature.data.entities.candle import Candle
-from feature.data.output.read import DataReadOutput
+from feature.data.output.read import DataReadOutput, ProfileOutput
 from feature.data.service.input import InputService
 from feature.data.usecase.create import Create
 from feature.data.usecase.update import Update
@@ -30,6 +30,5 @@ if __name__ == "__main__":
     # df = Read().run()
     # csv_pd(name = "data", df = df)
     
-    with sqlite3.connect(DATA.STORAGE_DIR/ f"data.db") as conn:
-        df = pd.read_sql(f"SELECT * FROM {'profile'}", conn)
+    df = ProfileOutput().run()
     csv_pd(name = "data_profile", df = df)

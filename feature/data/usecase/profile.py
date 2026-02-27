@@ -1,5 +1,7 @@
+import sqlite3
 from config import DATA
 from feature.data.entities.profile import PROFILE
+from feature.data.usecase.read import Read
 from feature.data.usecase.create import Create
 from feature.data.usecase.update import Update
 import pandas as pd
@@ -42,6 +44,14 @@ class ProfileUC:
     def __init__(self):
         pass
 
-    def run(self, ):
+    def run(self) -> pd.DataFrame:
+        with sqlite3.connect(DATA.STORAGE_DIR/ f"data.db") as conn:
+            df = pd.read_sql(f"SELECT * FROM {'profile'}", conn)
+            if df.empty or df is None:
+                self.make()
+                df = pd.read_sql(f"SELECT * FROM {'profile'}", conn)
+        return df
+    
+    def make(self):
         Create().run(entity = PROFILE)
         Update().run(entity = PROFILE, db=df)

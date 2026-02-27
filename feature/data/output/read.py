@@ -15,3 +15,9 @@ class DataReadOutput:
             ProfileUC().run()
             df = Read().run(Candle, tf = tf)
         return df
+    
+class ProfileOutput:
+    def run (self, name: str = "balanced") -> pd.DataFrame:
+        df = ProfileUC().run()
+        df = df.loc[df['name']==name]
+        return df

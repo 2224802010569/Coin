@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from feature.label.entities.trend import Trend
 from config import PROCESSING
 
 

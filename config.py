@@ -82,12 +82,23 @@ class LABEL:
     RECOMMEND = ["buy", "sell"]
 
 class MODEL:
-    EPOCHS =20
+    EPOCHS = 20
     BATCH_SIZE = 256
     LR = 1e-3
     TRAIN_RATIO = 0.7
-    HIDDEN = [64,32]
     WINDOW = 16
+    EPISODE_MEMORY = 50
+    REPLAY_TOP_K = 5
+
+class PROFILE_HIDDEN:
+    SAFE = [11, 64, 32, 16]
+    BALANCED = [11, 64, 64, 32]
+    AGGRESSIVE = [11, 128, 64, 32]
+
+
+class EXECUTION:
+    DEFAULT_VOL = 0.1
+    HOLD_VOL = 0.0
 
 def get_profile(name:str = "balanced") -> PROFILE:
     name = name.lower()
@@ -97,7 +108,7 @@ def get_profile(name:str = "balanced") -> PROFILE:
         "aggressive": AGGRESSIVE
     }[name]
 
-def set_profile(name: str):
+def set_profile(name:str = "balanced"):
     global ACTIVE_PROFILE, PROFILE
     ACTIVE_PROFILE = name
     PROFILE = get_profile(name)

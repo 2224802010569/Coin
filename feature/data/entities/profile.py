@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 @dataclass
 class PROFILE:
     name: str
