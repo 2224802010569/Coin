@@ -17,7 +17,7 @@ from feature.data.usecase.create import Create
 from feature.data.usecase.update import Update
 from feature.data.usecase.read import Read
 
-from feature.label.entities.trend import Trend
+# from feature.label.entities.trend import Trend
 from test_csv import csv_pd
 
 

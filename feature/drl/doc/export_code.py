@@ -1,7 +1,7 @@
 import os
 from docx import Document
 
-VERSION = "2.9.3"
+VERSION = "1.1.0"
 SERVICE_NAME = "DRL"
 OUTPUT_NAME = f"{VERSION}_{SERVICE_NAME}.docx"
 
@@ -9,9 +9,11 @@ def export_code():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     service_path = os.path.abspath(os.path.join(current_dir, ".."))
     print("[DEBUG] Đường dẫn đến service:", service_path)
+
     if not os.path.exists(service_path):
         print("[❌] Không tìm thấy thư mục:", service_path)
         return
+
     doc = Document()
     doc.add_heading(f"📦 Mã nguồn: {SERVICE_NAME}", level=1)
     file_count = 0

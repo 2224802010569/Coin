@@ -1,15 +1,18 @@
+from profile import Profile
+import sqlite3
 import sys
 import os
-import numpy as np
+
+import pandas as pd
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, ROOT)
-from feature.drl.input.profile_input import ProfileInput
-from feature.drl.usecase.sign_uc import SignUC
-from feature.middleware.profile import ProfileService
-from test_csv import csv_pd
 
+from feature.drl.usecase.backtest_uc import BacktestUsecase
+from feature.drl.usecase.train_uc import TrainAgentUsecase
 
-ProfileService().set_profile()
-df = SignUC().run()
-csv_pd(name="rl_output", df=df)
+trainer = TrainAgentUsecase()
+trainer.run("safe")
+
+# backtester = BacktestUsecase()
+# backtester.run("safe")
