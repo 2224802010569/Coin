@@ -1,0 +1,2 @@
+﻿name,Stability,Volatility,Aggression,Confidence,Horizon,Min_Trend_length,eval
+balanced,0.55,0.5,0.5,0.55,60,5,balanced
